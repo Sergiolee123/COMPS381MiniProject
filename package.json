@@ -1,16 +1,20 @@
 {
     "name": "server",
-    "description": "example",
+    "description": "for miniproject",
     "author": "COMPS381F",
     "version": "0.0.1",
     "dependencies": {
+        "express": "*",
+        "ejs": "*",
+        "body-parser": "*",
+        "cookie-session": "*",
         "mongodb": "3.1",
         "formidable": "1.2.2",
         "mongoose": "^4.13.20"
     },
     "engine": "node >= 12.10.0",
     "scripts": {
-        "start": "node Q1_server"
+        "start": "node server"
     }
 }
 
