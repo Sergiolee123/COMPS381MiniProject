@@ -35,15 +35,6 @@ app.use(session({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('/', (req,res) => {
-	console.log(req.session);
-	if (!req.session.authenticated) {    // user not logged in!
-		res.redirect('/login');
-	} else {
-		res.status(200).render('secrets',{name:req.session.username});
-	}
-});
-
 app.get('/login', (req,res) => {
 	res.status(200).render('login',{});
 });
