@@ -4,10 +4,11 @@ const session = require('cookie-session');
 const bodyParser = require('body-parser');
 const app = express();
 const ObjectID = require('mongodb').ObjectID;
+const fs = require('fs');
+const formidable = require('experss-formidable');
 const assert = require('assert');
 const http = require('http');
 const url = require('url');
-
 const mongourl = 'mongodb+srv://Admin:Admin@cluster.yhbdv.mongodb.net/inventory?retryWrites=true&w=majority';
 const mongoose = require('mongoose');
 const inventorySchema = mongoose.Schema({ 
