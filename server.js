@@ -11,7 +11,7 @@ const url = require('url');
 const mongourl = 'mongodb+srv://Admin:Admin@cluster.yhbdv.mongodb.net/inventory?retryWrites=true&w=majority';
 const mongoose = require('mongoose');
 const inventorySchema = mongoose.Schema({ 
-    inventoryid: String,
+    inventory_ID: String,
     mobile: String
 });
 
@@ -60,8 +60,8 @@ const handle_Find = (res, criteria) => {
 
     db.on('error', console.error.bind(console, 'connection error:'));
     db.once('open', () => {
-        const Booking = mongoose.model('booking',bookingSchema);
-        Booking.find(criteria, (err,results) => {
+        const Inventory = mongoose.model('inventory',inventorySchema);
+        Inventory.find(criteria, (err,results) => {
             if (err) return console.error(err);
             res.writeHead(200, {"content-type":"text/html"});
             res.write(`<html><body><H2>Inventories (${results.length})</H2><ul>`);
@@ -85,8 +85,8 @@ const handle_Details = (res, criteria) => {
         /* use Document ID for query */
         let DOCID = {};
         DOCID['_id'] = ObjectID(criteria._id)
-        const Booking = mongoose.model('inventory',inventorySchema);
-        Booking.findOne(criteria, (err,results) => {
+        const Inventory = mongoose.model('inventory',inventorySchema);
+        Inventory.findOne(criteria, (err,results) => {
             if (err) return console.error(err);
             res.writeHead(200, {"content-type":"text/html"});
             res.write('<html><body><ul>');
@@ -114,13 +114,13 @@ const handle_Edit = (res, criteria) => {
         /* use Document ID for query */
         let DOCID = {};
         DOCID['_id'] = ObjectID(criteria._id)
-        const Booking = mongoose.model('booking',bookingSchema);
-        Booking.findOne(criteria, (err,results) => {
+        const Inventory = mongoose.model('booking',bookingSchema);
+        Inventory.findOne(criteria, (err,results) => {
             if (err) return console.error(err);
             res.writeHead(200, {"content-type":"text/html"});
             res.write('<html><body>');
             res.write('<form action="/update" method=GET>');
-            res.write(`Booking ID: <input name="bookingid" value=${results.bookingid}><br>`);
+            res.write(`Inventory ID: <input name="bookingid" value=${results.bookingid}><br>`);
             res.write(`Mobile: <input name="mobile" value=${results.mobile} /><br>`);
             res.write(`<input type="hidden" name="_id" value=${results._id}>`)
             res.write(`<input type="submit" value="update">`);
@@ -140,8 +140,8 @@ const handle_Update = (res, criteria) => {
         /* use Document ID for query */
         let DOCID = {};
         DOCID['_id'] = ObjectID(criteria._id)
-        const Booking = mongoose.model('booking',bookingSchema);
-        Booking.findOne(DOCID, (err,results) => {
+        const Inventory = mongoose.model('inventory',inventorySchema);
+        Inventory.findOne(DOCID, (err,results) => {
             //console.log(results);
             results.bookingid = criteria.bookingid;
             results.mobile = criteria.mobile;
