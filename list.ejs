@@ -1,9 +1,9 @@
 <html>
     <body>
-        <H2>Bookings (<%= nBookings %>)</H2>
+        <H2>Bookings (<%= nInventories %>)</H2>
         <ul>
-            <% for (var b of bookings) { %>
-            <li>Booking ID: <a href="/details?_id=<%= b._id %>"><%= b.bookingid %></a></li>
+            <% for (var i of inventories) { %>
+            <li>Inventory ID: <a href="/details?_id=<%= b._id %>"><%= b.inventory_ID %></a></li>
             <% } %>
         </ul>
     </body>
