@@ -1,5 +1,5 @@
-
-const express = require('express');
+var express = require('express');
+var app = express();
 const session = require('cookie-session');
 const bodyParser = require('body-parser');
 const app = express();
