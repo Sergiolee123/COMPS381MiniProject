@@ -1,17 +1,36 @@
 <html>
-
+<head>
+	<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Inventory</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.0/umd/popper.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+	</head>
 <body>
-	<p>Use the following IDs and Password:</p>
-	<ol>
-		<li>guest (password: guest)</li>
-		<li>developer (password: developer)</li>
-	</ol>
-	<hr>
-	<form action="/login" method="post">
-		Username: <input type="text" name="name"><br>
-		Password: <input type="password" name="password"><br>
-		<input type="submit" value="Login">
-	</form>
+	<div class="container-fluid text-left ">
+            <div class="card bg-dark text-white">
+                <div class="card-body">Please login</div>
+            </div>
+            <div class="well">
+                <form action="/login" method="post">
+                    
+                        <label for="username">Username:</label>
+                        
+                            <span class="input-group-addon"><span class="glyphicon glyphicon-user"></span></span>
+                            <input type="text" class="form-control" name="username" id="username" placeholder="Username">
+                            <br>
+               
+                        <label for="password">Password:</label>
+                     
+                            <span class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></span>
+                            <input type="password" class="form-control" name="password" id="password" placeholder="Password">
+                    <br>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+            </div>
+        </div>
 </body>
 
 </html>
