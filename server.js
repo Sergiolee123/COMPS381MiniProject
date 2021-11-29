@@ -10,25 +10,22 @@ const url = require('url');
 
 const mongourl = 'mongodb+srv://Admin:Admin@cluster.yhbdv.mongodb.net/inventory?retryWrites=true&w=majority';
 const mongoose = require('mongoose');
-const bookingSchema = mongoose.Schema({ 
-    bookingid: String,
+const inventorySchema = mongoose.Schema({ 
+    inventoryid: String,
     mobile: String
 });
 
 app.set('view engine','ejs');
 
-const SECRETKEY = 'I want to pass COMPS381F';
-
 const users = new Array(
-	{name: 'developer', password: 'developer'},
-	{name: 'guest', password: 'guest'}
+	{name: 'demo', password: ''},
+	{name: 'Admin', password: 'admin'}
 );
 
 app.set('view engine','ejs');
 
 app.use(session({
   name: 'loginSession',
-  keys: [SECRETKEY]
 }));
 
 // support parsing of application/json type post data
@@ -48,7 +45,6 @@ app.post('/login', (req,res) => {
 			req.session.username = req.body.name;	 // 'username': req.body.name		
 		}
 	});
-	res.redirect('/');
 });
 
 app.get('/logout', (req,res) => {
@@ -68,9 +64,9 @@ const handle_Find = (res, criteria) => {
         Booking.find(criteria, (err,results) => {
             if (err) return console.error(err);
             res.writeHead(200, {"content-type":"text/html"});
-            res.write(`<html><body><H2>Bookings (${results.length})</H2><ul>`);
+            res.write(`<html><body><H2>Inventories (${results.length})</H2><ul>`);
             for (var doc of results) {
-                res.write(`<li>Booking ID: <a href="/details?_id=${doc._id}">${doc.bookingid}</a></li>`);
+                res.write(`<li>Inventory ID: <a href="/details?_id=${doc._id}">${doc.inventoryid}</a></li>`);
             }
             res.end('</ul></body></html>');
             console.log("Closed DB connection");
@@ -89,18 +85,18 @@ const handle_Details = (res, criteria) => {
         /* use Document ID for query */
         let DOCID = {};
         DOCID['_id'] = ObjectID(criteria._id)
-        const Booking = mongoose.model('booking',bookingSchema);
+        const Booking = mongoose.model('inventory',inventorySchema);
         Booking.findOne(criteria, (err,results) => {
             if (err) return console.error(err);
             res.writeHead(200, {"content-type":"text/html"});
             res.write('<html><body><ul>');
             //console.log(docs);
-            res.write(`<H2>Booking Details</H2><hr>`)
-            res.write(`<p>Booking ID: <b>${results.bookingid}</b></p>`);
-            res.write(`<p>Mobile: <b>${results.mobile}</b></p>`)
-            // Q1
+            res.write(`<H2>Inventory Details</H2><hr>`)
+            res.write(`<p>Inventory ID: <b>${results.inventoryid}</b></p>`);
+            res.write(`<p>Name: <b>${results.name}</b></p>`)
+	    res.write(`<p>TypeName: <b>${results.type}</b></p>`)
+	    res.write(`<p>Quantity: <b>${results.quantity}</b></p>`)
             res.write(`<a href="/edit?_id=${results._id}">edit</a><br><br>`)
-            //
             res.write(`<a href="/find">back<a>`);
             res.end('</body></html>');
             db.close();
