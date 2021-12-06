@@ -166,6 +166,67 @@ const handle_Update = (res, req, criteria) => {
    
 }
 
+const handle_API = (req, res) => {
+
+    let type = req.params.type
+    let value = req.params.value
+    const client = new MongoClient(mongourl);
+
+    switch(type){
+
+        case 'name':
+            criteria = {"name" : value}
+            //console.log(criteria)
+            client.connect((err) => {
+                assert.equal(null, err);
+                console.log("Connected successfully to server");
+                const db = client.db(dbName);
+        
+                findDocument(db, criteria, (docs) => {
+                    client.close();
+                    console.log("Closed DB connection"); 
+                    if(docs.length === 0){
+                        res.json({});
+                    }else{
+                        res.json(docs)
+                    }                
+                });
+            });
+            break
+        
+        case 'type':
+            criteria = {"inv_type" : value}
+            //console.log(criteria)
+            client.connect((err) => {
+                assert.equal(null, err);
+                console.log("Connected successfully to server");
+                const db = client.db(dbName);
+        
+                findDocument(db, criteria, (docs) => {
+                    client.close();
+                    console.log("Closed DB connection");
+                    if(docs.length === 0){
+                        res.json({});
+                    }else{
+                        res.json(docs)
+                    }   
+                });
+            });
+            break
+
+        default:
+            res.json({});
+
+    }
+
+        
+
+
+
+
+}
+
+
 const updateDocument = (criteria, updateDoc, callback) => {
 const client = new MongoClient(mongourl);
 client.connect((err) => {
@@ -195,6 +256,9 @@ app.get('/',(req,res)=> {
     });
 
 app.get('/login',(req,res)=> {
+    if(req.session.authenticated){
+        res.redirect('/home')
+    }
     res.status(200).render("login",{message: ""});   
      });
 
@@ -211,12 +275,12 @@ app.post('/login',(req,res)=> {
  });
 
 app.get('/home',(req,res)=> { 
-    if(req.session.authenticated){
+    if(!req.session.authenticated){
         res.redirect('/login')
-    }else{
-        handle_Find(res, req.query.docs);
-        res.end(); 
     }
+
+    handle_Find(res, req.query.docs);
+
 
     });
 
@@ -226,12 +290,12 @@ app.get('/create',(req,res)=>{
 
 app.post('/create', (req,res) => {
         handle_Create(res, req);
-        res.end();          
+    
     })
 
 app.get('/details',(req,res)=>{
     handle_Details(res,req.query);
-    res.end();    
+    
 })
 
 app.get('/map',(req,res)=>{
@@ -240,22 +304,23 @@ app.get('/map',(req,res)=>{
 		lon:req.query.lon,
 		zoom:req.query.zoom ? req.query.zoom : 15
 	});
-	res.end();
+
 })
 
 app.get('/edit',(req,res)=>{
+
     handle_Edit(res,req.query);
-    res.end();    
+    
 })
 
 app.post('/update',(req,res)=>{
     handle_Update(res, req, req.query);
-    res.end();   
+ 
 })
 
 app.get('/delete',(req,res)=>{
     handle_Delete();
-    res.end();
+
 })
 
 
@@ -265,8 +330,8 @@ app.get('/logout',(req,res)=>{
     res.redirect('/');
 });
 
-app.get('/api/inventory/',(req,res)=> {
-
+app.get('/api/inventory/:type/:value',(req,res)=> {
+    handle_API(req,res);
 })
 
 app.get('/*', (req,res) => { 
