@@ -118,7 +118,7 @@ const handle_Create = (res, req) => {
             }
             insertDocument(insertDoc, () => {
                 res.status(200).render('info', {
-                    message: `inserted one document`
+                    message: `inserted one document successfully`
                 })
             })
         }
@@ -271,7 +271,7 @@ const handle_Delete = (req, res) => {
                 deleteDocument(DOCID, (results) => {
                     if(results.deletedCount > 0){
                         res.status(200).render('info', {
-                            message: 'delete document(s)'
+                            message: 'deleted the document successfully'
                         })
                     }else{
                         res.status(200).render('info', {
