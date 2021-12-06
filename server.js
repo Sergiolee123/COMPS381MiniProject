@@ -250,33 +250,39 @@ app.get('/',(req,res)=> {
     //console.log(req.session);
 	if (!req.session.authenticated) {    // user not logged in!
 		res.redirect('/login');
-	} else {
-		res.redirect('/home');
-	}
+        return
+    }
+	res.redirect('/home');
+
     });
 
 app.get('/login',(req,res)=> {
     if(req.session.authenticated){
         res.redirect('/home')
+        return
     }
     res.status(200).render("login",{message: ""});   
      });
 
 app.post('/login',(req,res)=> {
-
+    let loginFail = true
     users.forEach((user) => {
 		if (user.username == req.body.username && user.password == req.body.password) {			
 			req.session.authenticated = true;      
 			req.session.username = req.body.username;  
-            res.redirect('/home');          
+            loginFail=false
+            res.redirect('/home');
         }
-    });           
-    res.status(200).render("login", {message: "Login failed"});   
+    });    
+    if(loginFail){
+        res.status(200).render("login", {message: "Login failed"});   
+    }       
  });
 
 app.get('/home',(req,res)=> { 
     if(!req.session.authenticated){
         res.redirect('/login')
+        return
     }
 
     handle_Find(res, req.query.docs);
