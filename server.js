@@ -7,6 +7,7 @@ const ObjectID = require('mongodb').ObjectID;
 const fs = require('fs');
 const assert = require('assert');
 const formidable = require('formidable');
+const { json } = require('express');
 const mongourl = 'mongodb+srv://victor:E8d423dd0@cluster0.02hkx.mongodb.net/miniproject?retryWrites=true&w=majority';
 //const mongourl='mongodb:victor:E8d423dd0@cluster0-shard-00-00.02hkx.mongodb.net:27017,cluster0-shard-00-01.02hkx.mongodb.net:27017,cluster0-shard-00-02.02hkx.mongodb.net:27017/miniproject?ssl=true&replicaSet=atlas-4cctjs-shard-0&authSource=admin&retryWrites=true&w=majority';
 const dbName = 'miniproject';
@@ -34,7 +35,7 @@ const users = new Array({
 
 const findDocument = (db, criteria, callback) => {
     let cursor = db.collection(collName).find(criteria);
-    console.log(`findDocument: ${JSON.stringify(criteria)}`);
+    //console.log(`findDocument: ${JSON.stringify(criteria)}`);
     cursor.toArray((err, docs) => {
         assert.equal(err, null);
         console.log(`findDocument: ${docs.length}`);
@@ -46,12 +47,12 @@ const handle_Find = (res, criteria) => {
     const client = new MongoClient(mongourl);
     client.connect((err) => {
         assert.equal(null, err);
-        console.log("Connected successfully to server");
+        //console.log("Connected successfully to server");
         const db = client.db(dbName);
 
         findDocument(db, criteria, (docs) => {
             client.close();
-            console.log("Closed DB connection");
+            //console.log("Closed DB connection");
             res.status(200).render('home.ejs', {
                 nItems: docs.length,
                 items: docs
@@ -66,14 +67,14 @@ const handle_Details = (res, criteria) => {
     const client = new MongoClient(mongourl);
     client.connect((err) => {
         assert.equal(null, err);
-        console.log("Connected successfuly to server");
+        //console.log("Connected successfuly to server");
         const db = client.db(dbName);
         let DOCID = {};
         DOCID['_id'] = ObjectID(criteria._id);
 
         findDocument(db, DOCID, (docs) => {
             client.close();
-            console.log("Closed DB connection");
+            //console.log("Closed DB connection");
             res.status(200).render("details.ejs", {
                 item: docs[0]
             })
@@ -91,7 +92,7 @@ const handle_Create = (res, req) => {
     form.parse(req, (err, fields, files) => {
         if (fields.name == undefined || fields.name == "") {
             res.status(200).render('info', {
-                message: `inserted one document`
+                message: `Please input the name of the inventory`
             })
         } else {
             var insertDoc = {}
@@ -131,7 +132,7 @@ const handle_Edit = (res, criteria) => {
     const client = new MongoClient(mongourl);
     client.connect((err) => {
         assert.equal(null, err);
-        console.log("Connected successfully to server");
+        //console.log("Connected successfully to server");
         const db = client.db(dbName);
         /* use Document ID for query */
         let DOCID = {};
@@ -139,7 +140,7 @@ const handle_Edit = (res, criteria) => {
 
         findDocument(db, DOCID, (docs) => {
             client.close();
-            console.log("Closed DB connection");
+            //console.log("Closed DB connection");
             res.status(200).render("edit.ejs", {
                 item: docs[0]
             })
@@ -151,7 +152,7 @@ const insertDocument = (insertDoc, callback) => {
     const client = new MongoClient(mongourl)
     client.connect((err) => {
         assert.equal(null, err)
-        console.log("Connected successfully to server")
+        //console.log("Connected successfully to server")
         const db = client.db("miniproject")
         db.collection(collName).insertOne(insertDoc,
             (err, results) => {
@@ -170,7 +171,7 @@ const handle_Update = (res, req, criteria) => {
 
     form.parse(req, (err, fields, files) => {
 
-        
+
         var DOCID = {};
         //how to pass the corresponding _id
         DOCID['_id'] = ObjectID(fields._id);
@@ -178,17 +179,19 @@ const handle_Update = (res, req, criteria) => {
         const client = new MongoClient(mongourl);
         client.connect((err) => {
             assert.equal(null, err);
-            console.log("Connected successfully to server");
+            //console.log("Connected successfully to server");
             const db = client.db(dbName);
             /* use Document ID for query */
-    
+
             findDocument(db, DOCID, (docs) => {
                 client.close();
-                console.log("Closed DB connection");
-                if(docs[0].manager != req.session.username){
+                //console.log("Closed DB connection");
+                if (docs[0].manager != req.session.username) {
 
-                    res.status(200).render("info", {message: "Only the manager can update"})
-                }else {
+                    res.status(200).render("info", {
+                        message: "Only the manager of this inventory can update it"
+                    })
+                } else {
                     var updateDoc = {};
                     updateDoc['name'] = fields.name;
                     updateDoc['inv_type'] = fields.inv_type;
@@ -219,17 +222,75 @@ const handle_Update = (res, req, criteria) => {
                         });
                     }
                 }
-                
+
             });
         });
-       
-
-
-
 
     });
 
 }
+
+const handle_Delete = (req, res) => {
+
+    var DOCID = {};
+    //how to pass the corresponding _id
+    DOCID['_id'] = ObjectID(req.query._id);
+    console.log(DOCID)
+    const client = new MongoClient(mongourl);
+    client.connect((err) => {
+        assert.equal(null, err);
+        //console.log("Connected successfully to server");
+        const db = client.db(dbName);
+        /* use Document ID for query */
+
+        findDocument(db, DOCID, (docs) => {
+            client.close();
+            //console.log("Closed DB connection");
+            if(docs[0].manager != req.session.username){
+
+                res.status(200).render("info", {
+                    message: "Only the manager of this inventory can delete it"
+                })
+            } else {
+                const deleteDocument = (criteria, callback) => {
+                    client.connect((err) => {
+                        assert.equal(null, err);
+                        //console.log("Connected successfully to server");
+                        const db = client.db(dbName);
+                        db.collection(collName).deleteOne(
+                            criteria,
+                            (err, results) => {
+                                assert.equal(err, null);
+                                //console.log(results);
+                                callback(results);
+                            }
+                        );
+                    });
+                };
+
+                deleteDocument(DOCID, (results) => {
+                    if(results.deletedCount > 0){
+                        res.status(200).render('info', {
+                            message: 'delete document(s)'
+                        })
+                    }else{
+                        res.status(200).render('info', {
+                            message: 'delete failed'
+                        })
+                    }
+                })
+            }
+
+        });
+    });
+
+
+
+
+
+
+}
+
 
 const handle_API = (req, res) => {
 
@@ -246,12 +307,12 @@ const handle_API = (req, res) => {
             //console.log(criteria)
             client.connect((err) => {
                 assert.equal(null, err);
-                console.log("Connected successfully to server");
+                //console.log("Connected successfully to server");
                 const db = client.db(dbName);
 
                 findDocument(db, criteria, (docs) => {
                     client.close();
-                    console.log("Closed DB connection");
+                    //console.log("Closed DB connection");
                     if (docs.length === 0) {
                         res.json({});
                     } else {
@@ -268,12 +329,12 @@ const handle_API = (req, res) => {
             //console.log(criteria)
             client.connect((err) => {
                 assert.equal(null, err);
-                console.log("Connected successfully to server");
+                //console.log("Connected successfully to server");
                 const db = client.db(dbName);
 
                 findDocument(db, criteria, (docs) => {
                     client.close();
-                    console.log("Closed DB connection");
+                    //console.log("Closed DB connection");
                     if (docs.length === 0) {
                         res.json({});
                     } else {
@@ -300,7 +361,7 @@ const updateDocument = (criteria, updateDoc, callback) => {
     const client = new MongoClient(mongourl);
     client.connect((err) => {
         assert.equal(null, err);
-        console.log("Connected successfully to server");
+        //console.log("Connected successfully to server");
         const db = client.db(dbName);
         db.collection(collName).updateOne(criteria, {
                 $set: updateDoc
@@ -397,7 +458,7 @@ app.post('/update', (req, res) => {
 })
 
 app.get('/delete', (req, res) => {
-    handle_Delete();
+    handle_Delete(req, res, req.query);
 
 })
 
