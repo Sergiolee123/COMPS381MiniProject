@@ -42,8 +42,9 @@
                     <p>Zipcode:  <%= item.inventory_address.zipcode %>  </p><br>
                     <p>GPS:   [<%= item.inventory_address.coord %>]</p><br>                   
     
-                <p>Manager: Not done here</p><br>             
-                    <a href="/map?lat=<%= item.inventory_address.coord[0] %>&lon=<%= item.inventory_address.coord[1]%>" class="btn btn-info" role="button">Map</a>
+                <p>Manager: <%= item.manager %></p><br>             
+                    <button id="map" class="btn btn-info" role="button">Map</button>
+                    <div id='message'></div>
                 
             </div>
             </div>
@@ -55,5 +56,15 @@
             </div>
             <br>            
         </div>
+        <script>
+            $("#map").click( function(){
+
+                if('<%= item.inventory_address.coord[0] %>' == undefined || '<%= item.inventory_address.coord[1]%>'== "" ){
+                    $("#message").append("<br><p>coordinate informaion is needed in order to use map</p>")
+                }else{
+                    window.location.replace("/map?lat=<%= item.inventory_address.coord[0] %>&lon=<%= item.inventory_address.coord[1]%>");
+                }
+            })
+        </script>
     </body>
 </html>

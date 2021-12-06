@@ -13,31 +13,36 @@ const dbName = 'miniproject';
 const collName = "test";
 const SECRETKEY = 'I want to pass COMPS381F';
 app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({extended: true}));
-
-app.set('view engine','ejs');
-
-app.use(session({
-    name: 'seesion' ,
-    keys: [SECRETKEY] 
+app.use(bodyParser.urlencoded({
+    extended: true
 }));
 
-const users = new Array(
-	{username: 'student', password: ''},
-    {username: 'demo', password: ''}
-);
+app.set('view engine', 'ejs');
 
-const findDocument = (db, criteria, callback) => {    
+app.use(session({
+    name: 'seesion',
+    keys: [SECRETKEY]
+}));
+
+const users = new Array({
+    username: 'student',
+    password: ''
+}, {
+    username: 'demo',
+    password: ''
+});
+
+const findDocument = (db, criteria, callback) => {
     let cursor = db.collection(collName).find(criteria);
     console.log(`findDocument: ${JSON.stringify(criteria)}`);
-    cursor.toArray((err,docs) => {
-        assert.equal(err,null);
+    cursor.toArray((err, docs) => {
+        assert.equal(err, null);
         console.log(`findDocument: ${docs.length}`);
         callback(docs);
     });
 }
 
-const handle_Find = (res, criteria) => {   
+const handle_Find = (res, criteria) => {
     const client = new MongoClient(mongourl);
     client.connect((err) => {
         assert.equal(null, err);
@@ -46,124 +51,184 @@ const handle_Find = (res, criteria) => {
 
         findDocument(db, criteria, (docs) => {
             client.close();
-            console.log("Closed DB connection");                    
-            res.status(200).render('home.ejs',{ nItems:docs.length, items:docs})
-                       
+            console.log("Closed DB connection");
+            res.status(200).render('home.ejs', {
+                nItems: docs.length,
+                items: docs
+            })
+
         });
     });
 }
 
 
-const handle_Details=(res,criteria)=>{
-    const client= new MongoClient(mongourl);    
-    client.connect((err)=>{
-        assert.equal(null,err);
+const handle_Details = (res, criteria) => {
+    const client = new MongoClient(mongourl);
+    client.connect((err) => {
+        assert.equal(null, err);
         console.log("Connected successfuly to server");
         const db = client.db(dbName);
         let DOCID = {};
-        DOCID['_id']=ObjectID(criteria._id);
+        DOCID['_id'] = ObjectID(criteria._id);
 
-        findDocument(db, DOCID, (docs)=>{
+        findDocument(db, DOCID, (docs) => {
             client.close();
-            console.log("Closed DB connection");            
-            res.status(200).render("details.ejs", {item:docs[0]})            
+            console.log("Closed DB connection");
+            res.status(200).render("details.ejs", {
+                item: docs[0]
+            })
         });
-    });    
+    });
 }
 
-const handle_Create=(res,req)=>{     
-    if(req.fields.name==undefined || req.fields.name==""){        
-        res.status(200).render('info', {message:`inserted one document`})      
-    }else{
-        var insertDoc={}  
-        insertDoc['name']=req.fields.name;
-        insertDoc['inv_type']=req.fields.inv_type;
-        insertDoc['quantity']=req.fields.quantity;  
-        var address = {}
-        address.street=req.fields.street
-        address.building=req.fields.building
-        address.country=req.fields.country
-        address.zipcode=req.fields.zipcode    
-        address.coord=[req.fields.latitude,req.fields.longitude] 
-        insertDoc['inventory_address']=address;
-        insertDoc['photo'] ="";
-        insertDoc['photo_mimetype']="";                
-        if (req.files.photo.size > 0) {
-            fs.readFile(req.files.photo.path, (err,data) => {
-                assert.equal(err,null);
-                insertDoc['photo'] = new Buffer.from(data).toString('base64');         
-                insertDoc['photo_mimetype']=req.files.photo.type;  
-            });
+const handle_Create = (res, req) => {
+
+
+    const form = formidable({
+        multiples: true
+    });
+
+    form.parse(req, (err, fields, files) => {
+        if (fields.name == undefined || fields.name == "") {
+            res.status(200).render('info', {
+                message: `inserted one document`
+            })
+        } else {
+            var insertDoc = {}
+            insertDoc['name'] = fields.name;
+            insertDoc['inv_type'] = fields.inv_type;
+            insertDoc['quantity'] = fields.quantity;
+            var address = {}
+            address.street = fields.street
+            address.building = fields.building
+            address.country = fields.country
+            address.zipcode = fields.zipcode
+            address.coord = [fields.latitude, fields.longitude]
+            insertDoc['inventory_address'] = address;
+            insertDoc['photo'] = "";
+            insertDoc['photo_mimetype'] = "";
+            insertDoc['manager'] = req.session.username
+            if (files.photo.size > 0) {
+                fs.readFile(files.photo.filepath, (err, data) => {
+                    assert.equal(err, null);
+                    insertDoc['photo'] = new Buffer.from(data).toString('base64');
+                    insertDoc['photo_mimetype'] = files.photo.type;
+                });
+            }
+            insertDocument(insertDoc, () => {
+                res.status(200).render('info', {
+                    message: `inserted one document`
+                })
+            })
         }
-        insertDocument(insertDoc,()=>{
-            res.status(200).render('info', {message:`inserted one document`})
-        })        
-    }
+    });
+
+
 }
 
-const handle_Edit=(res,criteria)=>{
+const handle_Edit = (res, criteria) => {
+
     const client = new MongoClient(mongourl);
     client.connect((err) => {
         assert.equal(null, err);
         console.log("Connected successfully to server");
         const db = client.db(dbName);
         /* use Document ID for query */
-        let DOCID = {};        
-        DOCID['_id'] = ObjectID(criteria._id)  
-        
-        findDocument(db, DOCID, (docs)=>{
+        let DOCID = {};
+        DOCID['_id'] = ObjectID(criteria._id)
+
+        findDocument(db, DOCID, (docs) => {
             client.close();
-            console.log("Closed DB connection");            
-            res.status(200).render("edit.ejs", {item:docs[0]})          
-        });           
+            console.log("Closed DB connection");
+            res.status(200).render("edit.ejs", {
+                item: docs[0]
+            })
+        });
     });
 }
 
-const insertDocument=(insertDoc, callback)=>{
-    const client=new MongoClient(mongourl)
-    client.connect((err)=>{
-        assert.equal(null,err)
+const insertDocument = (insertDoc, callback) => {
+    const client = new MongoClient(mongourl)
+    client.connect((err) => {
+        assert.equal(null, err)
         console.log("Connected successfully to server")
-        const db=client.db("miniproject")
+        const db = client.db("miniproject")
         db.collection(collName).insertOne(insertDoc,
-            (err,results)=>{
+            (err, results) => {
                 client.close()
-                assert.equal(null,err)
+                assert.equal(null, err)
                 callback(results)
-            })        
+            })
     })
 }
 
-const handle_Update = (res, req, criteria) => {    
-    var DOCID = {};   
-    //how to pass the corresponding _id
-    DOCID['_id'] = ObjectID(req.fields._id);   
-    var updateDoc = {};
-    updateDoc['name'] = req.fields.name;
-    updateDoc['inv_type'] = req.fields.inv_type;
-    updateDoc['quantity'] = req.fields.quantity;
-    var address={}
-    address.street=req.fields.street
-    address.building=req.fields.building
-    address.country=req.fields.country
-    address.zipcode=req.fields.zipcode    
-    address.coord=[req.fields.latitude,req.fields.longitude] 
-    updateDoc['inventory_address']=address;
-    if (req.files.photo.size > 0) {
-        fs.readFile(req.files.photo.path, (err,data) => {
-            assert.equal(err,null);
-            updateDoc['photo'] = new Buffer.from(data).toString('base64');
-            updateDoc['photo_mimetype']=req.files.photo.type; 
-            updateDocument(DOCID, updateDoc, (results) => {
-                res.status(200).render('info', {message: `Updated document(s)`})
+const handle_Update = (res, req, criteria) => {
+
+    const form = formidable({
+        multiples: true
+    });
+
+    form.parse(req, (err, fields, files) => {
+
+        
+        var DOCID = {};
+        //how to pass the corresponding _id
+        DOCID['_id'] = ObjectID(fields._id);
+
+        const client = new MongoClient(mongourl);
+        client.connect((err) => {
+            assert.equal(null, err);
+            console.log("Connected successfully to server");
+            const db = client.db(dbName);
+            /* use Document ID for query */
+    
+            findDocument(db, DOCID, (docs) => {
+                client.close();
+                console.log("Closed DB connection");
+                if(docs[0].manager != req.session.username){
+
+                    res.status(200).render("info", {message: "Only the manager can update"})
+                }else {
+                    var updateDoc = {};
+                    updateDoc['name'] = fields.name;
+                    updateDoc['inv_type'] = fields.inv_type;
+                    updateDoc['quantity'] = fields.quantity;
+                    var address = {}
+                    address.street = fields.street
+                    address.building = fields.building
+                    address.country = fields.country
+                    address.zipcode = fields.zipcode
+                    address.coord = [fields.latitude, fields.longitude]
+                    updateDoc['inventory_address'] = address;
+                    if (files.photo.size > 0) {
+                        fs.readFile(files.photo.filepath, (err, data) => {
+                            assert.equal(err, null);
+                            updateDoc['photo'] = new Buffer.from(data).toString('base64');
+                            updateDoc['photo_mimetype'] = files.photo.type;
+                            updateDocument(DOCID, updateDoc, (results) => {
+                                res.status(200).render('info', {
+                                    message: `Updated document(s)`
+                                })
+                            });
+                        });
+                    } else {
+                        updateDocument(DOCID, updateDoc, (results) => {
+                            res.status(200).render('info', {
+                                message: `Updated document(s)`
+                            })
+                        });
+                    }
+                }
+                
             });
         });
-    } else {
-        updateDocument(DOCID, updateDoc, (results) => {
-            res.status(200).render('info', {message: `Updated document(s)`})           
-        });
-    }  
-   
+       
+
+
+
+
+    });
+
 }
 
 const handle_API = (req, res) => {
@@ -172,44 +237,48 @@ const handle_API = (req, res) => {
     let value = req.params.value
     const client = new MongoClient(mongourl);
 
-    switch(type){
+    switch (type) {
 
         case 'name':
-            criteria = {"name" : value}
+            criteria = {
+                "name": value
+            }
             //console.log(criteria)
             client.connect((err) => {
                 assert.equal(null, err);
                 console.log("Connected successfully to server");
                 const db = client.db(dbName);
-        
-                findDocument(db, criteria, (docs) => {
-                    client.close();
-                    console.log("Closed DB connection"); 
-                    if(docs.length === 0){
-                        res.json({});
-                    }else{
-                        res.json(docs)
-                    }                
-                });
-            });
-            break
-        
-        case 'type':
-            criteria = {"inv_type" : value}
-            //console.log(criteria)
-            client.connect((err) => {
-                assert.equal(null, err);
-                console.log("Connected successfully to server");
-                const db = client.db(dbName);
-        
+
                 findDocument(db, criteria, (docs) => {
                     client.close();
                     console.log("Closed DB connection");
-                    if(docs.length === 0){
+                    if (docs.length === 0) {
                         res.json({});
-                    }else{
+                    } else {
                         res.json(docs)
-                    }   
+                    }
+                });
+            });
+            break
+
+        case 'type':
+            criteria = {
+                "inv_type": value
+            }
+            //console.log(criteria)
+            client.connect((err) => {
+                assert.equal(null, err);
+                console.log("Connected successfully to server");
+                const db = client.db(dbName);
+
+                findDocument(db, criteria, (docs) => {
+                    client.close();
+                    console.log("Closed DB connection");
+                    if (docs.length === 0) {
+                        res.json({});
+                    } else {
+                        res.json(docs)
+                    }
                 });
             });
             break
@@ -219,7 +288,7 @@ const handle_API = (req, res) => {
 
     }
 
-        
+
 
 
 
@@ -228,59 +297,62 @@ const handle_API = (req, res) => {
 
 
 const updateDocument = (criteria, updateDoc, callback) => {
-const client = new MongoClient(mongourl);
-client.connect((err) => {
-    assert.equal(null, err);
-    console.log("Connected successfully to server");
-    const db = client.db(dbName);    
-     db.collection(collName).updateOne(criteria,
-        {
-            $set : updateDoc
-        },
-        (err, results) => {
-            client.close();
-            assert.equal(err, null);
-            callback(results);
-        }
-    );
-});
+    const client = new MongoClient(mongourl);
+    client.connect((err) => {
+        assert.equal(null, err);
+        console.log("Connected successfully to server");
+        const db = client.db(dbName);
+        db.collection(collName).updateOne(criteria, {
+                $set: updateDoc
+            },
+            (err, results) => {
+                client.close();
+                assert.equal(err, null);
+                callback(results);
+            }
+        );
+    });
 }
 
-app.get('/',(req,res)=> {   
+app.get('/', (req, res) => {
     //console.log(req.session);
-	if (!req.session.authenticated) {    // user not logged in!
-		res.redirect('/login');
+    if (!req.session.authenticated) { // user not logged in!
+        res.redirect('/login');
         return
     }
-	res.redirect('/home');
+    res.redirect('/home');
 
-    });
+});
 
-app.get('/login',(req,res)=> {
-    if(req.session.authenticated){
+app.get('/login', (req, res) => {
+    if (req.session.authenticated) {
         res.redirect('/home')
         return
     }
-    res.status(200).render("login",{message: ""});   
-     });
+    res.status(200).render("login", {
+        message: ""
+    });
+});
 
-app.post('/login',(req,res)=> {
+app.post('/login', (req, res) => {
     let loginFail = true
     users.forEach((user) => {
-		if (user.username == req.body.username && user.password == req.body.password) {			
-			req.session.authenticated = true;      
-			req.session.username = req.body.username;  
-            loginFail=false
+        if (user.username == req.body.username && user.password == req.body.password) {
+            req.session.authenticated = true;
+            req.session.username = req.body.username;
+            loginFail = false
             res.redirect('/home');
         }
-    });    
-    if(loginFail){
-        res.status(200).render("login", {message: "Login failed"});   
-    }       
- });
+    });
+    if (loginFail) {
+        res.status(200).render("login", {
+            message: "Login failed"
+        });
+    }
+});
 
-app.get('/home',(req,res)=> { 
-    if(!req.session.authenticated){
+app.get('/home', (req, res) => {
+    if (!req.session.authenticated) {
         res.redirect('/login')
         return
     }
@@ -288,64 +360,62 @@ app.get('/home',(req,res)=> {
     handle_Find(res, req.query.docs);
 
 
-    });
+});
 
-app.get('/create',(req,res)=>{
+app.get('/create', (req, res) => {
     res.status(200).render('create')
+});
+
+app.post('/create', (req, res) => {
+    handle_Create(res, req);
+
+})
+
+app.get('/details', (req, res) => {
+    handle_Details(res, req.query);
+
+})
+
+app.get('/map', (req, res) => {
+    res.status(200).render("leaflet.ejs", {
+        lat: req.query.lat,
+        lon: req.query.lon,
+        zoom: req.query.zoom ? req.query.zoom : 15
     });
 
-app.post('/create', (req,res) => {
-        handle_Create(res, req);
-    
-    })
-
-app.get('/details',(req,res)=>{
-    handle_Details(res,req.query);
-    
 })
 
-app.get('/map',(req,res)=>{
-    res.status(200).render("leaflet.ejs", {
-		lat:req.query.lat,
-		lon:req.query.lon,
-		zoom:req.query.zoom ? req.query.zoom : 15
-	});
+app.get('/edit', (req, res) => {
+
+    handle_Edit(res, req.query);
 
 })
 
-app.get('/edit',(req,res)=>{
-
-    handle_Edit(res,req.query);
-    
-})
-
-app.post('/update',(req,res)=>{
+app.post('/update', (req, res) => {
     handle_Update(res, req, req.query);
- 
+
 })
 
-app.get('/delete',(req,res)=>{
+app.get('/delete', (req, res) => {
     handle_Delete();
 
 })
 
 
 
-app.get('/logout',(req,res)=>{  
-    req.session=null;
+app.get('/logout', (req, res) => {
+    req.session = null;
     res.redirect('/');
 });
 
-app.get('/api/inventory/:type/:value',(req,res)=> {
-    handle_API(req,res);
+app.get('/api/inventory/:type/:value', (req, res) => {
+    handle_API(req, res);
 })
 
-app.get('/*', (req,res) => { 
-   res.status(404).render('info', {message: `${req.path} - Unknown request!` });
+app.get('/*', (req, res) => {
+    res.status(404).render('info', {
+        message: `${req.path} - Unknown request!`
+    });
 });
 
 app.listen(process.env.PORT || 8099);
-
-
-
-

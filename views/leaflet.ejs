@@ -16,8 +16,8 @@
       <script>
          // Creating map options
          var mapOptions = {
-            center: [<%=lat%>,<%=lon%>],
-            zoom: <%=zoom%>
+            center: ['<%=lat%>','<%=lon%>'],
+            zoom: '<%=zoom%>'
          }
          
          // Creating a map object
@@ -29,7 +29,7 @@
          // Adding layer to the map
          map.addLayer(layer);
          // Creating a marker
-         var marker = L.marker([<%=lat%>,<%=lon%>]);
+         var marker = L.marker(['<%=lat%>','<%=lon%>']);
          // Adding marker to the map
          marker.addTo(map);
       </script>
