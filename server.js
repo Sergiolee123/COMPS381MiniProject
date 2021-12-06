@@ -1,182 +1,280 @@
-var express = require('express');
-var app = express();
+const express = require('express');
 const session = require('cookie-session');
 const bodyParser = require('body-parser');
 const app = express();
+const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
 const fs = require('fs');
-const formidable = require('experss-formidable');
 const assert = require('assert');
-const http = require('http');
-const url = require('url');
-const mongourl = 'mongodb+srv://Admin:Admin@cluster.yhbdv.mongodb.net/inventory?retryWrites=true&w=majority';
-const mongoose = require('mongoose');
-const inventorySchema = mongoose.Schema({ 
-    inventory_ID: String,
-    mobile: String
-});
-
-app.set('view engine','ejs');
-
-const users = new Array(
-	{name: 'demo', password: ''},
-	{name: 'Admin', password: 'admin'}
-);
+const formidable = require('formidable');
+const mongourl = 'mongodb+srv://victor:E8d423dd0@cluster0.02hkx.mongodb.net/miniproject?retryWrites=true&w=majority';
+//const mongourl='mongodb:victor:E8d423dd0@cluster0-shard-00-00.02hkx.mongodb.net:27017,cluster0-shard-00-01.02hkx.mongodb.net:27017,cluster0-shard-00-02.02hkx.mongodb.net:27017/miniproject?ssl=true&replicaSet=atlas-4cctjs-shard-0&authSource=admin&retryWrites=true&w=majority';
+const dbName = 'miniproject';
+const collName = "test";
+const SECRETKEY = 'I want to pass COMPS381F';
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({extended: true}));
 
 app.set('view engine','ejs');
 
 app.use(session({
-  name: 'loginSession',
+    name: 'seesion' ,
+    keys: [SECRETKEY] 
 }));
 
-// support parsing of application/json type post data
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const users = new Array(
+	{username: 'student', password: ''},
+    {username: 'demo', password: ''}
+);
 
-app.get('/login', (req,res) => {
-	res.status(200).render('login',{});
+const findDocument = (db, criteria, callback) => {    
+    let cursor = db.collection(collName).find(criteria);
+    console.log(`findDocument: ${JSON.stringify(criteria)}`);
+    cursor.toArray((err,docs) => {
+        assert.equal(err,null);
+        console.log(`findDocument: ${docs.length}`);
+        callback(docs);
+    });
+}
+
+const handle_Find = (res, criteria) => {   
+    const client = new MongoClient(mongourl);
+    client.connect((err) => {
+        assert.equal(null, err);
+        console.log("Connected successfully to server");
+        const db = client.db(dbName);
+
+        findDocument(db, criteria, (docs) => {
+            client.close();
+            console.log("Closed DB connection");                    
+            res.status(200).render('home.ejs',{ nItems:docs.length, items:docs})
+                       
+        });
+    });
+}
+
+
+const handle_Details=(res,criteria)=>{
+    const client= new MongoClient(mongourl);    
+    client.connect((err)=>{
+        assert.equal(null,err);
+        console.log("Connected successfuly to server");
+        const db = client.db(dbName);
+        let DOCID = {};
+        DOCID['_id']=ObjectID(criteria._id);
+
+        findDocument(db, DOCID, (docs)=>{
+            client.close();
+            console.log("Closed DB connection");            
+            res.status(200).render("details.ejs", {item:docs[0]})            
+        });
+    });    
+}
+
+const handle_Create=(res,req)=>{     
+    if(req.fields.name==undefined || req.fields.name==""){        
+        res.status(200).render('info', {message:`inserted one document`})      
+    }else{
+        var insertDoc={}  
+        insertDoc['name']=req.fields.name;
+        insertDoc['inv_type']=req.fields.inv_type;
+        insertDoc['quantity']=req.fields.quantity;  
+        var address = {}
+        address.street=req.fields.street
+        address.building=req.fields.building
+        address.country=req.fields.country
+        address.zipcode=req.fields.zipcode    
+        address.coord=[req.fields.latitude,req.fields.longitude] 
+        insertDoc['inventory_address']=address;
+        insertDoc['photo'] ="";
+        insertDoc['photo_mimetype']="";                
+        if (req.files.photo.size > 0) {
+            fs.readFile(req.files.photo.path, (err,data) => {
+                assert.equal(err,null);
+                insertDoc['photo'] = new Buffer.from(data).toString('base64');         
+                insertDoc['photo_mimetype']=req.files.photo.type;  
+            });
+        }
+        insertDocument(insertDoc,()=>{
+            res.status(200).render('info', {message:`inserted one document`})
+        })        
+    }
+}
+
+const handle_Edit=(res,criteria)=>{
+    const client = new MongoClient(mongourl);
+    client.connect((err) => {
+        assert.equal(null, err);
+        console.log("Connected successfully to server");
+        const db = client.db(dbName);
+        /* use Document ID for query */
+        let DOCID = {};        
+        DOCID['_id'] = ObjectID(criteria._id)  
+        
+        findDocument(db, DOCID, (docs)=>{
+            client.close();
+            console.log("Closed DB connection");            
+            res.status(200).render("edit.ejs", {item:docs[0]})          
+        });           
+    });
+}
+
+const insertDocument=(insertDoc, callback)=>{
+    const client=new MongoClient(mongourl)
+    client.connect((err)=>{
+        assert.equal(null,err)
+        console.log("Connected successfully to server")
+        const db=client.db("miniproject")
+        db.collection(collName).insertOne(insertDoc,
+            (err,results)=>{
+                client.close()
+                assert.equal(null,err)
+                callback(results)
+            })        
+    })
+}
+
+const handle_Update = (res, req, criteria) => {    
+    var DOCID = {};   
+    //how to pass the corresponding _id
+    DOCID['_id'] = ObjectID(req.fields._id);   
+    var updateDoc = {};
+    updateDoc['name'] = req.fields.name;
+    updateDoc['inv_type'] = req.fields.inv_type;
+    updateDoc['quantity'] = req.fields.quantity;
+    var address={}
+    address.street=req.fields.street
+    address.building=req.fields.building
+    address.country=req.fields.country
+    address.zipcode=req.fields.zipcode    
+    address.coord=[req.fields.latitude,req.fields.longitude] 
+    updateDoc['inventory_address']=address;
+    if (req.files.photo.size > 0) {
+        fs.readFile(req.files.photo.path, (err,data) => {
+            assert.equal(err,null);
+            updateDoc['photo'] = new Buffer.from(data).toString('base64');
+            updateDoc['photo_mimetype']=req.files.photo.type; 
+            updateDocument(DOCID, updateDoc, (results) => {
+                res.status(200).render('info', {message: `Updated document(s)`})
+            });
+        });
+    } else {
+        updateDocument(DOCID, updateDoc, (results) => {
+            res.status(200).render('info', {message: `Updated document(s)`})           
+        });
+    }  
+   
+}
+
+const updateDocument = (criteria, updateDoc, callback) => {
+const client = new MongoClient(mongourl);
+client.connect((err) => {
+    assert.equal(null, err);
+    console.log("Connected successfully to server");
+    const db = client.db(dbName);    
+     db.collection(collName).updateOne(criteria,
+        {
+            $set : updateDoc
+        },
+        (err, results) => {
+            client.close();
+            assert.equal(err, null);
+            callback(results);
+        }
+    );
 });
+}
 
-app.post('/login', (req,res) => {
-	users.forEach((user) => {
-		if (user.name == req.body.name && user.password == req.body.password) {
-			// correct user name + password
-			// store the following name/value pairs in cookie session
-			req.session.authenticated = true;        // 'authenticated': true
-			req.session.username = req.body.name;	 // 'username': req.body.name		
-		}
+app.get('/',(req,res)=> {   
+    //console.log(req.session);
+	if (!req.session.authenticated) {    // user not logged in!
+		res.redirect('/login');
+	} else {
+		res.redirect('/home');
+	}
+    });
+
+app.get('/login',(req,res)=> {
+    res.status(200).render("login",{message: ""});   
+     });
+
+app.post('/login',(req,res)=> {
+
+    users.forEach((user) => {
+		if (user.username == req.body.username && user.password == req.body.password) {			
+			req.session.authenticated = true;      
+			req.session.username = req.body.username;  
+            res.redirect('/home');          
+        }
+    });           
+    res.status(200).render("login", {message: "Login failed"});   
+ });
+
+app.get('/home',(req,res)=> { 
+    if(req.session.authenticated){
+        res.redirect('/login')
+    }else{
+        handle_Find(res, req.query.docs);
+        res.end(); 
+    }
+
+    });
+
+app.get('/create',(req,res)=>{
+    res.status(200).render('create')
+    });
+
+app.post('/create', (req,res) => {
+        handle_Create(res, req);
+        res.end();          
+    })
+
+app.get('/details',(req,res)=>{
+    handle_Details(res,req.query);
+    res.end();    
+})
+
+app.get('/map',(req,res)=>{
+    res.status(200).render("leaflet.ejs", {
+		lat:req.query.lat,
+		lon:req.query.lon,
+		zoom:req.query.zoom ? req.query.zoom : 15
 	});
+	res.end();
+})
+
+app.get('/edit',(req,res)=>{
+    handle_Edit(res,req.query);
+    res.end();    
+})
+
+app.post('/update',(req,res)=>{
+    handle_Update(res, req, req.query);
+    res.end();   
+})
+
+app.get('/delete',(req,res)=>{
+    handle_Delete();
+    res.end();
+})
+
+
+
+app.get('/logout',(req,res)=>{  
+    req.session=null;
+    res.redirect('/');
 });
 
-app.get('/logout', (req,res) => {
-	req.session = null;   // clear cookie-session
-	res.redirect('/');
+app.get('/api/inventory/',(req,res)=> {
+
+})
+
+app.get('/*', (req,res) => { 
+   res.status(404).render('info', {message: `${req.path} - Unknown request!` });
 });
 
 app.listen(process.env.PORT || 8099);
 
-const handle_Find = (res, criteria) => {
-    mongoose.connect(mongourl, {useMongoClient: true});
-    let db = mongoose.connection;
 
-    db.on('error', console.error.bind(console, 'connection error:'));
-    db.once('open', () => {
-        const Inventory = mongoose.model('inventory',inventorySchema);
-        Inventory.find(criteria, (err,results) => {
-            if (err) return console.error(err);
-            res.writeHead(200, {"content-type":"text/html"});
-            res.write(`<html><body><H2>Inventories (${results.length})</H2><ul>`);
-            for (var doc of results) {
-                res.write(`<li>Inventory ID: <a href="/details?_id=${doc._id}">${doc.inventoryid}</a></li>`);
-            }
-            res.end('</ul></body></html>');
-            console.log("Closed DB connection");
-            db.close();
-        })
-    })
-}
 
-const handle_Details = (res, criteria) => {
-    mongoose.connect(mongourl, {useMongoClient: true});
 
-    let db = mongoose.connection;
-
-    db.on('error', console.error.bind(console, 'connection error:'));
-    db.once('open', () => {
-        /* use Document ID for query */
-        let DOCID = {};
-        DOCID['_id'] = ObjectID(criteria._id)
-        const Inventory = mongoose.model('inventory',inventorySchema);
-        Inventory.findOne(criteria, (err,results) => {
-            if (err) return console.error(err);
-            res.writeHead(200, {"content-type":"text/html"});
-            res.write('<html><body><ul>');
-            //console.log(docs);
-            res.write(`<H2>Inventory Details</H2><hr>`)
-            res.write(`<p>Inventory ID: <b>${results.inventoryid}</b></p>`);
-            res.write(`<p>Name: <b>${results.name}</b></p>`)
-	    res.write(`<p>TypeName: <b>${results.type}</b></p>`)
-	    res.write(`<p>Quantity: <b>${results.quantity}</b></p>`)
-            res.write(`<a href="/edit?_id=${results._id}">edit</a><br><br>`)
-            res.write(`<a href="/find">back<a>`);
-            res.end('</body></html>');
-            db.close();
-        });
-    });
-}
-
-const handle_Edit = (res, criteria) => {
-    mongoose.connect(mongourl, {useMongoClient: true});
-    
-    let db = mongoose.connection;
-
-    db.on('error', console.error.bind(console, 'connection error:'));
-    db.once('open', () => {
-        /* use Document ID for query */
-        let DOCID = {};
-        DOCID['_id'] = ObjectID(criteria._id)
-        const Inventory = mongoose.model('booking',bookingSchema);
-        Inventory.findOne(criteria, (err,results) => {
-            if (err) return console.error(err);
-            res.writeHead(200, {"content-type":"text/html"});
-            res.write('<html><body>');
-            res.write('<form action="/update" method=GET>');
-            res.write(`Inventory ID: <input name="bookingid" value=${results.bookingid}><br>`);
-            res.write(`Mobile: <input name="mobile" value=${results.mobile} /><br>`);
-            res.write(`<input type="hidden" name="_id" value=${results._id}>`)
-            res.write(`<input type="submit" value="update">`);
-            res.end('</form></body></html>');
-            db.close();
-        });
-    });
-}
-
-const handle_Update = (res, criteria) => {
-    mongoose.connect(mongourl, {useMongoClient: true});
-    
-    let db = mongoose.connection;
-
-    db.on('error', console.error.bind(console, 'connection error:'));
-    db.once('open', () => {
-        /* use Document ID for query */
-        let DOCID = {};
-        DOCID['_id'] = ObjectID(criteria._id)
-        const Inventory = mongoose.model('inventory',inventorySchema);
-        Inventory.findOne(DOCID, (err,results) => {
-            //console.log(results);
-            results.bookingid = criteria.bookingid;
-            results.mobile = criteria.mobile;
-            results.save(err => {
-                res.writeHead(200, {"content-type":"text/html"});
-                res.write(`<html><body><p>Updated document(s)<p><br>`);
-                res.end('<a href="/">back</a></body></html>');
-                db.close();
-            })
-        })
-    })
-}
-
-const server = http.createServer((req,res) => {
-    var parsedURL = url.parse(req.url, true);
- 
-    switch(parsedURL.pathname) {
-        case '/':
-        case '/find':
-            handle_Find(res, parsedURL.query);
-            break;
-        case '/details':
-            handle_Details(res, parsedURL.query);
-            break;
-        case '/edit':
-            handle_Edit(res, parsedURL.query);
-            break;
-        case '/update':
-            handle_Update(res, parsedURL.query);
-            break;
-        default:
-            res.writeHead(404, {'Content-Type': 'text/plain'});
-            res.end(`${parsedURL.pathname} - Unknown request!`);
-    }
-})
- 
-server.listen(process.env.PORT || 8099);
